@@ -1,0 +1,72 @@
+## Exercise 3.2: Cleaning Titanic Data
+
+**Step 0: load titanic_original.csv into R**
+
+```{r titanic}
+library(dplyr,stringr)
+titanic <- tbl_df(read.csv("https://raw.githubusercontent.com/mattbarger/springboard-exercises/exercise-3.2/titanic_original.csv", stringsAsFactors = FALSE))
+```
+
+
+**Step 1: Port of embarkation**
+Find missing values in `embarked` variable, replace with Southampton (`"S"`). First, inspect the data:
+
+```{r step 1}
+titanic %>%
+  group_by(embarked) %>%
+  count(embarked)
+```
+
+Empty string found in three observations. Parse the empty string using `str_trim()` and then inspect individual observations:
+```{r step 1}
+titanic %>%
+  filter(embarked == "")
+```
+
+One NA observation found.  Remove NA observation from sample using `filter()`, and then use `gsub()` to replace missing `embarked` values and check back using `count` again:
+
+```{r step 1}
+titanic <- titanic %>% filter(!is.na(survived))
+titanic$embarked <- gsub("^$","S",titanic$embarked)
+titanic %>%
+  group_by(embarked) %>%
+  count(embarked)
+```
+
+**Step 2: Age**
+Calculate the mean of the `age` variable and use that value to populate the missing values.  First, inspect the data and find the missing values. Then, use `replace()` and `mean()` to replace `NA` values.
+
+```{r step 2}
+table(is.na(titanic$age))
+titanic$age <- titanic$age %>%
+  replace(which(is.na(.)),mean(.,na.rm = TRUE))
+```
+
+There are other ways to populate the data that do not involve overpopulating the mean over 263 samples.  One way I would predict this value would be to populate the normal distribution of ages for the missing values across 2 standard deviations +/- the `mean(age)`.
+
+**Step 3: Lifeboat**
+Fill empty strings in `boat` with dummy value (e.g. "None" or "NA").  First, inspect the data:
+
+```{r step 3}
+titanic %>%
+  group_by(boat) %>%
+  count(boat)
+```
+
+823 empty character strings found. Using `str_trim()` and `replace()` to parse and replace empty strings with `"None"`
+```{r step 3}
+titanic$boat <- str_trim(titanic$boat)
+titanic$boat <- titanic$boat %>%
+  replace(which(.==""),"None")
+```
+
+**Step 4: Cabin**
+Create new `has_cabin_number` dummy variable that populates as 1 if `cabin` is not an empty string.
+```{r step 4}
+table(titanic$cabin)
+titanic$cabin <- str_trim(titanic$cabin)
+titanic <- titanic %>% mutate(has_cabin_number = as.numeric(cabin != ""))
+```
+
+**Step 5: write .csv, publish to Github**
+write.csv(titanic, "titanic_clean.csv", row.names = FALSE)
